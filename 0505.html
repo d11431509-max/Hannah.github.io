@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouBike 2.0 精準定位儀表板</title>
+    <!-- 引入 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 引入 Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary-color: #f7ca18; 
+            --accent-blue: #3498db;
+            --secondary-color: #333;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            --transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: var(--secondary-color);
+            margin-bottom: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: #fff;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            box-shadow: var(--shadow);
+            margin-top: 10px;
+        }
+
+        /* 地圖區域 */
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 4px solid #fff;
+        }
+
+        /* 搜尋框樣式 */
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .search-box input {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 10px 15px;
+            border-radius: 10px;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-location { background-color: var(--accent-blue); color: white; }
+        .btn-refresh { background-color: var(--primary-color); color: var(--secondary-color); }
+        .btn-search { background-color: var(--secondary-color); color: white; }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            filter: brightness(1.05);
+        }
+
+        #data-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            border-top: 6px solid var(--primary-color);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .card:hover { transform: translateY(-5px); }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .dist-tag { background: #eef2f7; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; }
+        .bike-count { font-size: 1.4rem; font-weight: 800; color: #27ae60; }
+
+        .pulse {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>YouBike 導航儀表板</h1>
+            <div id="location-status" class="status-badge">
+                <span class="pulse" style="background-color: #3498db"></span> 準備緒
+            </div>
+        </header>
+
+        <!-- 手動搜尋框 -->
+        <div class="search-box">
+            <input type="text" id="address-input" placeholder="GPS 定位失敗？輸入地標試試 (例如: 台北車站)">
+            <button id="search-btn" class="btn btn-search">搜尋定位</button>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="controls">
+            <button id="locate-btn" class="btn btn-location">🎯 定位我的位置</button>
+            <button id="refresh-btn" class="btn btn-refresh">🔄 刷新站點資訊</button>
+        </div>
+
+        <div id="data-container"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const locateBtn = document.getElementById('locate-btn');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const searchBtn = document.getElementById('search-btn');
+        const addressInput = document.getElementById('address-input');
+        const dataContainer = document.getElementById('data-container');
+        const statusEl = document.getElementById('location-status');
+        
+        const API_URL = 'https://tcgbusfs.blob.core.windows.net/dotapp/youbike/v2/youbike_immediate.json';
+        
+        let map = L.map('map', { zoomControl: false }).setView([25.0408, 121.5161], 15);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO'
+        }).addTo(map);
+
+        let markersLayer = L.layerGroup().addTo(map);
+        let userMarker = null;
+        let lastCoord = { lat: 25.0408, lng: 121.5161 };
+
+        // 自動定位
+        function startTracking() {
+            updateStatus("正在嘗試 GPS 定位...", "#3498db");
+            
+            if (!navigator.geolocation) {
+                updateStatus("瀏覽器不支援 GPS，請使用手動搜尋", "#e74c3c");
+                loadData(lastCoord.lat, lastCoord.lng);
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    updatePosition(latitude, longitude, "✅ GPS 定位成功");
+                },
+                (err) => {
+                    let msg = "❌ 定位失敗";
+                    if (err.code === 1) msg = "❌ 您拒絕了定位權限";
+                    else if (err.code === 3) msg = "❌ 定位超時";
+                    updateStatus(msg + "，請嘗試手動搜尋", "#e74c3c");
+                    loadData(lastCoord.lat, lastCoord.lng);
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        }
+
+        // 手動地址搜尋 (使用 Nominatim OpenStreetMap API)
+        async function searchAddress() {
+            const query = addressInput.value.trim();
+            if (!query) return;
+
+            updateStatus("正在搜尋地標...", "#f39c12");
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const results = await res.json();
+                
+                if (results && results.length > 0) {
+                    const { lat, lon } = results[0];
+                    updatePosition(parseFloat(lat), parseFloat(lon), `📍 已定位至：${query}`);
+                } else {
+                    updateStatus("找不到該地點，請換個關鍵字", "#e74c3c");
+                }
+            } catch (e) {
+                updateStatus("搜尋服務異常", "#e74c3c");
+            }
+        }
+
+        function updatePosition(lat, lng, statusText) {
+            lastCoord = { lat, lng };
+            updateStatus(statusText, "#27ae60");
+            map.flyTo([lat, lng], 17);
+            
+            if (userMarker) map.removeLayer(userMarker);
+            userMarker = L.circleMarker([lat, lng], {
+                radius: 10, fillColor: "#3498db", color: "#fff", weight: 3, fillOpacity: 0.9
+            }).addTo(map).bindPopup("設定中心點").openPopup();
+
+            loadData(lat, lng);
+        }
+
+        async function loadData(uLat, uLng) {
+            try {
+                dataContainer.innerHTML = '<div class="loader"></div>';
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                dataContainer.innerHTML = '';
+                markersLayer.clearLayers();
+
+                const list = data.map(s => ({
+                    ...s,
+                    dist: calcDist(uLat, uLng, s.latitude, s.longitude)
+                })).sort((a, b) => a.dist - b.dist).slice(0, 5);
+
+                list.forEach(s => {
+                    const m = L.marker([s.latitude, s.longitude])
+                        .addTo(markersLayer)
+                        .bindPopup(`<b>${clean(s.sna)}</b><br>車輛：${s.available_rent_bikes}`);
+
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <h3>${clean(s.sna)}</h3>
+                        <p>📍 ${s.ar}</p>
+                        <div class="card-footer">
+                            <span class="dist-tag">距離約 ${Math.round(s.dist)}m</span>
+                            <div>
+                                <span class="bike-count">${s.available_rent_bikes}</span>
+                                <small> 輛可用</small>
+                            </div>
+                        </div>
+                    `;
+                    card.onclick = () => { map.flyTo([s.latitude, s.longitude], 18); m.openPopup(); };
+                    dataContainer.appendChild(card);
+                });
+            } catch (e) {
+                statusEl.innerHTML = "資料讀取錯誤";
+            }
+        }
+
+        function updateStatus(text, color) {
+            statusEl.innerHTML = `<span class="pulse" style="background-color:${color}"></span> ${text}`;
+        }
+
+        function calcDist(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const p1 = lat1 * Math.PI/180;
+            const p2 = lat2 * Math.PI/180;
+            const dp = (lat2-lat1) * Math.PI/180;
+            const dl = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(dp/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function clean(n) { return n.replace('YouBike2.0_', ''); }
+
+        locateBtn.addEventListener('click', startTracking);
+        refreshBtn.addEventListener('click', () => loadData(lastCoord.lat, lastCoord.lng));
+        searchBtn.addEventListener('click', searchAddress);
+        addressInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') searchAddress(); });
+
+        window.onload = startTracking;
+    </script>
+</body>
+</html>
