@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>課程與進度導覽</title>
+    <!-- 引入 Google Fonts 提升質感 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #10b981;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --text-color: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg-gradient);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+        }
+
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        h1 {
+            margin-bottom: 2rem;
+            font-size: 1.8rem;
+            color: #374151;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .nav-button {
+            display: block;
+            text-decoration: none;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            border-radius: 0.75rem;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* 第一個按鈕顏色 */
+        .btn-0428 {
+            background-color: var(--primary-color);
+        }
+        .btn-0428:hover {
+            background-color: #4338ca;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4);
+        }
+
+        /* 第二個按鈕顏色 */
+        .btn-0505 {
+            background-color: var(--secondary-color);
+        }
+        .btn-0505:hover {
+            background-color: #059669;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        /* 簡單的點擊反饋動畫 */
+        .nav-button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>請選擇查看日期</h1>
+        
+        <div class="button-group">
+            <!-- 直接使用 <a> 標籤連結到目標檔案 -->
+            <a href="0428.html" class="nav-button btn-0428">查看 0428 檔案</a>
+            <a href="0505.html" class="nav-button btn-0505">查看 0505 檔案</a>
+        </div>
+
+        <div class="footer">
+            點擊上方按鈕跳轉至對應頁面
+        </div>
+    </div>
+
+    <script>
+        // JavaScript 可以在此添加一些互動邏輯
+        // 例如：記錄使用者點擊了哪個按鈕
+        document.querySelectorAll('.nav-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const target = e.target.getAttribute('href');
+                console.log(`正在跳轉至: ${target}`);
+                
+                // 如果需要一些跳轉前的特效，可以在這裡處理
+                // 目前預設行為是直接連結
+            });
+        });
+
+        // 確保視窗調整時背景能正確顯示
+        window.addEventListener('resize', () => {
+            document.body.style.height = window.innerHeight + 'px';
+        });
+    </script>
+</body>
+</html>
